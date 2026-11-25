@@ -1,0 +1,11 @@
+# Router topology for the OSPF simulator
+# Format: ROUTER_A ROUTER_B COST
+# OSPF cost = reference bandwidth (100 Mbps) / link bandwidth
+#   GigabitEthernet -> cost 1, FastEthernet -> cost 1, 10 Mbps -> cost 10, T1 serial -> 64
+# This extends the campus project with extra backup links to show path selection.
+R1-HQ      R2-BRANCH   1
+R1-HQ      ISP         1
+R1-HQ      R3-DC       10
+R2-BRANCH  R4-BRANCH2  64
+R3-DC      R4-BRANCH2  1
+R2-BRANCH  R3-DC       10

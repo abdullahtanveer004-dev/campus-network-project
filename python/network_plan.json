@@ -1,0 +1,14 @@
+{
+  "router_name": "R1-HQ",
+  "trunk_interface": "GigabitEthernet0/0",
+  "dns_server": "192.168.40.10",
+  "domain": "campus.local",
+  "dhcp_excluded_hosts": 10,
+  "vlans": [
+    {"id": 10, "name": "ADMIN",      "network": "192.168.10.0/24", "dhcp": true},
+    {"id": 20, "name": "STUDENTS",   "network": "192.168.20.0/24", "dhcp": true},
+    {"id": 30, "name": "LAB",        "network": "192.168.30.0/24", "dhcp": true},
+    {"id": 40, "name": "SERVERS",    "network": "192.168.40.0/24", "dhcp": false},
+    {"id": 99, "name": "MANAGEMENT", "network": "192.168.99.0/24", "dhcp": false, "native": true}
+  ]
+}

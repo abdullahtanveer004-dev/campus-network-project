@@ -1,0 +1,13 @@
+! ============================================================
+!  SW2-BRANCH  (Cisco 2960-24TT)  - Branch access switch
+!  All ports in default VLAN 1 (simple flat branch LAN)
+! ============================================================
+hostname SW2-BRANCH
+no ip domain-lookup
+enable secret Cisco@123
+!
+interface range FastEthernet0/1 - 24
+ spanning-tree portfast
+!
+end
+write memory

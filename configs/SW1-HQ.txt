@@ -1,0 +1,102 @@
+! ============================================================
+!  SW1-HQ  (Cisco 2960-24TT)  - HQ access switch
+!  Roles: VLANs, 802.1Q trunk, port security, SSH management
+! ============================================================
+! Port plan:
+!   Fa0/1  - Fa0/5   VLAN 10 ADMIN
+!   Fa0/6  - Fa0/10  VLAN 20 STUDENTS
+!   Fa0/11 - Fa0/15  VLAN 30 LAB
+!   Fa0/20           VLAN 40 SERVERS (DNS/Web server)
+!   Gi0/1            TRUNK to R1-HQ G0/0
+!   all other ports  shut down (security)
+! ------------------------------------------------------------
+hostname SW1-HQ
+no ip domain-lookup
+enable secret Cisco@123
+banner motd #Authorized access only. Campus Network - SW1-HQ#
+service password-encryption
+!
+vlan 10
+ name ADMIN
+vlan 20
+ name STUDENTS
+vlan 30
+ name LAB
+vlan 40
+ name SERVERS
+vlan 99
+ name MANAGEMENT
+vlan 999
+ name BLACKHOLE
+!
+! ---------- Trunk to router ----------
+interface GigabitEthernet0/1
+ description TRUNK-TO-R1
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,40,99
+!
+! ---------- Access ports + port security ----------
+interface range FastEthernet0/1 - 5
+ description ADMIN-PCS
+ switchport mode access
+ switchport access vlan 10
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ spanning-tree portfast
+!
+interface range FastEthernet0/6 - 10
+ description STUDENT-PCS
+ switchport mode access
+ switchport access vlan 20
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ spanning-tree portfast
+!
+interface range FastEthernet0/11 - 15
+ description LAB-PCS
+ switchport mode access
+ switchport access vlan 30
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ spanning-tree portfast
+!
+interface FastEthernet0/20
+ description SERVER-DNS-WEB
+ switchport mode access
+ switchport access vlan 40
+ spanning-tree portfast
+!
+! ---------- Unused ports: disable and park in blackhole VLAN ----------
+interface range FastEthernet0/16 - 19 , FastEthernet0/21 - 24 , GigabitEthernet0/2
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+!
+! ---------- Management IP + SSH ----------
+interface Vlan99
+ ip address 192.168.99.2 255.255.255.0
+ no shutdown
+ip default-gateway 192.168.99.1
+!
+ip domain-name campus.local
+username admin privilege 15 secret Admin@123
+crypto key generate rsa general-keys modulus 1024
+ip ssh version 2
+!
+line console 0
+ password Console@123
+ login
+ logging synchronous
+line vty 0 15
+ login local
+ transport input ssh
+!
+end
+write memory

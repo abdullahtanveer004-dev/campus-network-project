@@ -1,0 +1,133 @@
+! ============================================================
+!  R1-HQ  (Cisco 2911)  - Core / Edge router of the campus
+!  Roles: Router-on-a-stick (inter-VLAN routing), DHCP server,
+!         OSPF, NAT/PAT to the Internet, ACL security, SSH
+! ============================================================
+! Paste in CLI tab:  enable  ->  configure terminal  -> paste
+! ------------------------------------------------------------
+hostname R1-HQ
+no ip domain-lookup
+enable secret Cisco@123
+banner motd #Authorized access only. Campus Network - R1-HQ#
+service password-encryption
+!
+! ---------- SSH (secure remote login) ----------
+ip domain-name campus.local
+username admin privilege 15 secret Admin@123
+crypto key generate rsa general-keys modulus 1024
+ip ssh version 2
+!
+! ---------- DHCP pools (one per VLAN) ----------
+ip dhcp excluded-address 192.168.10.1 192.168.10.10
+ip dhcp excluded-address 192.168.20.1 192.168.20.10
+ip dhcp excluded-address 192.168.30.1 192.168.30.10
+!
+ip dhcp pool ADMIN
+ network 192.168.10.0 255.255.255.0
+ default-router 192.168.10.1
+ dns-server 192.168.40.10
+ domain-name campus.local
+ip dhcp pool STUDENTS
+ network 192.168.20.0 255.255.255.0
+ default-router 192.168.20.1
+ dns-server 192.168.40.10
+ domain-name campus.local
+ip dhcp pool LAB
+ network 192.168.30.0 255.255.255.0
+ default-router 192.168.30.1
+ dns-server 192.168.40.10
+ domain-name campus.local
+!
+! ---------- Trunk to SW1 : router-on-a-stick ----------
+interface GigabitEthernet0/0
+ description TRUNK-TO-SW1
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet0/0.10
+ description VLAN10-ADMIN
+ encapsulation dot1Q 10
+ ip address 192.168.10.1 255.255.255.0
+ ip nat inside
+!
+interface GigabitEthernet0/0.20
+ description VLAN20-STUDENTS
+ encapsulation dot1Q 20
+ ip address 192.168.20.1 255.255.255.0
+ ip nat inside
+ ip access-group STUDENT-POLICY in
+!
+interface GigabitEthernet0/0.30
+ description VLAN30-LAB
+ encapsulation dot1Q 30
+ ip address 192.168.30.1 255.255.255.0
+ ip nat inside
+!
+interface GigabitEthernet0/0.40
+ description VLAN40-SERVERS
+ encapsulation dot1Q 40
+ ip address 192.168.40.1 255.255.255.0
+ ip nat inside
+!
+interface GigabitEthernet0/0.99
+ description VLAN99-MANAGEMENT
+ encapsulation dot1Q 99 native
+ ip address 192.168.99.1 255.255.255.0
+!
+! ---------- Link to Branch router R2 ----------
+interface GigabitEthernet0/1
+ description WAN-TO-R2-BRANCH
+ ip address 10.0.0.1 255.255.255.252
+ ip nat inside
+ no shutdown
+!
+! ---------- Link to ISP (Internet) ----------
+interface GigabitEthernet0/2
+ description WAN-TO-ISP
+ ip address 203.0.113.2 255.255.255.252
+ ip nat outside
+ no shutdown
+!
+! ---------- OSPF dynamic routing ----------
+router ospf 1
+ router-id 1.1.1.1
+ network 192.168.10.0 0.0.0.255 area 0
+ network 192.168.20.0 0.0.0.255 area 0
+ network 192.168.30.0 0.0.0.255 area 0
+ network 192.168.40.0 0.0.0.255 area 0
+ network 192.168.99.0 0.0.0.255 area 0
+ network 10.0.0.0 0.0.0.3 area 0
+ passive-interface GigabitEthernet0/0
+ default-information originate
+!
+! ---------- Default route to Internet ----------
+ip route 0.0.0.0 0.0.0.0 203.0.113.1
+!
+! ---------- NAT / PAT (many private IPs -> 1 public IP) ----------
+access-list 1 permit 192.168.0.0 0.0.255.255
+ip nat inside source list 1 interface GigabitEthernet0/2 overload
+!
+! ---------- Security ACLs ----------
+! Students may NOT reach Admin or Management networks
+ip access-list extended STUDENT-POLICY
+ deny ip 192.168.20.0 0.0.0.255 192.168.10.0 0.0.0.255
+ deny ip 192.168.20.0 0.0.0.255 192.168.99.0 0.0.0.255
+ permit ip any any
+!
+! Only Admin + Management networks may SSH into the router
+ip access-list standard VTY-ACCESS
+ permit 192.168.10.0 0.0.0.255
+ permit 192.168.99.0 0.0.0.255
+!
+line console 0
+ password Console@123
+ login
+ logging synchronous
+line vty 0 4
+ login local
+ transport input ssh
+ access-class VTY-ACCESS in
+ exec-timeout 10 0
+!
+end
+write memory

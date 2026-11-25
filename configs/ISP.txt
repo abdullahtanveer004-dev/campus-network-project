@@ -1,0 +1,20 @@
+! ============================================================
+!  ISP  (Cisco 2911)  - Simulates the Internet provider
+!  It only knows the public IP of R1 (NAT hides private IPs)
+! ============================================================
+hostname ISP
+no ip domain-lookup
+enable secret Cisco@123
+!
+interface GigabitEthernet0/0
+ description TO-CAMPUS-R1
+ ip address 203.0.113.1 255.255.255.252
+ no shutdown
+!
+interface GigabitEthernet0/1
+ description INTERNET-SERVER-LAN
+ ip address 198.51.100.1 255.255.255.0
+ no shutdown
+!
+end
+write memory
